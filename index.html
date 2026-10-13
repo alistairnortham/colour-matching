@@ -25,6 +25,10 @@ video{display:block;width:100%;height:100%;object-fit:cover}
 #dot{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #000;pointer-events:none}
 #close{position:absolute;top:10px;left:10px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:18px}
 #cam:not(.photo) #close{display:none}
+#zoom{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:4px;border-radius:999px;background:rgba(0,0,0,.45)}
+#zoom button{min-width:38px;height:38px;padding:0 9px;border-radius:999px;color:#fff;font-size:13px;font-weight:600}
+#zoom button.on{background:rgba(255,255,255,.92);color:#000}
+#cam.photo #zoom{display:none}
 #hint{margin:8px 16px 0;min-height:18px;text-align:center;font-size:13px;color:#b9bec4}
 #controls{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:12px 28px calc(18px + env(safe-area-inset-bottom))}
 #lib{justify-self:start;width:46px;height:46px;border-radius:10px;border:2px solid #fff;background:#222 center/cover no-repeat;display:flex;align-items:center;justify-content:center}
@@ -66,6 +70,7 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
     <canvas id="c" hidden></canvas>
     <div id="dot" hidden></div>
     <button id="close" aria-label="Back to camera">✕</button>
+    <div id="zoom" hidden></div>
   </div>
   <p id="hint"></p>
   <div id="controls">
@@ -89,7 +94,7 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 </main>
 <script>
 const $ = id => document.getElementById(id);
-let colours = [], combos = {}, stream = null, near = [], pickedRgb = null, facing = 'environment';
+let colours = [], combos = {}, stream = null, near = [], pickedRgb = null, facing = 'environment', lenses = [], lensId = null;
 
 function rgb2lab(r, g, b) {
   [r, g, b] = [r, g, b].map(v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; });
@@ -135,18 +140,47 @@ async function startCam() {
   $('cam').classList.remove('photo');
   $('out').hidden = true; $('c').hidden = true; $('dot').hidden = true; $('v').hidden = false;
   hint('');
+  $('zoom').hidden = true;
+  const video = facing === 'environment' && lensId ? { deviceId: { exact: lensId } } : { facingMode: { ideal: facing } };
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing } }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
     if (inPhoto()) { stopCam(); return; }
     const v = $('v');
     v.muted = true;
     v.setAttribute('playsinline', '');
     v.srcObject = stream;
     await v.play();
+    await findLenses();
+    drawZoom();
   } catch (e) {
+    if (lensId) { lensId = null; return startCam(); }
     hint('The camera could not start. Allow camera access for this site in Settings, then reopen the app.');
   }
 }
+
+async function findLenses() {
+  if (lenses.length) return;
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+  const plain = d => !/dual|triple|front/i.test(d.label);
+  const uw = devs.find(d => plain(d) && /ultra ?wide/i.test(d.label));
+  const tele = devs.find(d => plain(d) && /telephoto/i.test(d.label));
+  const wide = devs.find(d => plain(d) && /back/i.test(d.label) && !/ultra|tele/i.test(d.label));
+  lenses = [[uw, '.5'], [wide, '1×'], [tele, 'Tele']].filter(l => l[0]).map(([d, text]) => ({ id: d.deviceId, text }));
+  if (lenses.length < 2) lenses = [];
+}
+
+function drawZoom() {
+  const z = $('zoom');
+  if (facing !== 'environment' || !lenses.length) { z.hidden = true; return; }
+  const cur = (stream && stream.getVideoTracks()[0].getSettings().deviceId) || lensId;
+  z.innerHTML = lenses.map(l => '<button data-id="' + l.id + '" class="' + (l.id === cur ? 'on' : '') + '">' + l.text + '</button>').join('');
+  z.hidden = false;
+}
+
+$('zoom').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) { lensId = b.dataset.id; startCam(); }
+});
 
 function stopCam() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
