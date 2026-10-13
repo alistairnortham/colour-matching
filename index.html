@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colour test</title>
+</head>
+<body style="font-family:sans-serif;text-align:center">
+<h1>It works!</h1>
+<button id="b">Start camera</button>
+<br>
+<video id="v" playsinline autoplay muted style="width:90%;margin-top:12px"></video>
+<script>
+document.getElementById('b').onclick = async () => {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    document.getElementById('v').srcObject = s;
+  } catch (e) { alert('Camera error: ' + e.message); }
+};
+</script>
+</body>
+</html>
