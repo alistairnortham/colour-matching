@@ -101,12 +101,17 @@ const toHex = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join(''
 const hint = t => { $('hint').textContent = t; };
 
 async function startCam() {
+  stopCam();
   $('out').hidden = true; $('c').hidden = true; $('dot').hidden = true;
   $('v').hidden = false; $('snap').hidden = false; $('retake').hidden = true;
   hint('Point the camera at something, then tap Take photo.');
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-    $('v').srcObject = stream;
+    const v = $('v');
+    v.muted = true;
+    v.setAttribute('playsinline', '');
+    v.srcObject = stream;
+    await v.play();
   } catch (e) {
     hint('The camera could not start (' + e.message + '). Allow camera access for this site in Settings, then reload.');
   }
@@ -173,10 +178,14 @@ async function init() {
   startCam();
 }
 
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !$('v').hidden) startCam();
+});
+window.addEventListener('pageshow', e => { if (e.persisted && !$('v').hidden) startCam(); });
+$('v').addEventListener('click', startCam);
+
 init();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
-
-
