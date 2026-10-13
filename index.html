@@ -34,7 +34,8 @@ button{flex:1;padding:15px;font:inherit;font-weight:700;border:0;border-radius:1
 .vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 #pair{display:flex;gap:12px;margin-top:18px}
 .near{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;-webkit-overflow-scrolling:touch}
-.near button{flex:0 0 78px;padding:6px;background:var(--card);color:var(--ink);border:2px solid transparent;border-radius:12px;font-weight:400;text-align:left}
+#match{cursor:pointer}
+.near button{flex:1 1 0;min-width:0;padding:6px;background:var(--card);color:var(--ink);border:2px solid transparent;border-radius:12px;font-weight:400;text-align:left}
 .near button.on{border-color:var(--ink)}
 .near i{display:block;height:44px;border-radius:8px;border:1px solid var(--line)}
 .near b{display:block;font-size:12px;font-weight:600;margin-top:4px;line-height:1.2}
@@ -68,8 +69,10 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 <input type="file" id="file" accept="image/*" class="vh">
 <section id="out" hidden>
   <div id="pair"></div>
-  <h3>Close matches (tap to swap)</h3>
-  <div id="near" class="near"></div>
+  <div id="nearBox" hidden>
+    <h3>Close matches (tap one to swap)</h3>
+    <div id="near" class="near"></div>
+  </div>
   <div id="combos"></div>
 </section>
 <footer>Colour combinations from Wada Sanzo's <i>A Dictionary of Color Combinations</i>, data via sanzo-wada.dmbk.io.</footer>
@@ -148,6 +151,10 @@ $('snap').onclick = () => {
 };
 
 $('retake').onclick = startCam;
+
+$('pair').addEventListener('click', e => {
+  if (e.target.closest('#match')) $('nearBox').hidden = !$('nearBox').hidden;
+});
 
 $('near').addEventListener('click', e => {
   const b = e.target.closest('button');
@@ -243,8 +250,9 @@ cv.addEventListener('pointercancel', () => { dragging = false; loupe.hidden = tr
 function show(rgb) {
   if (!colours.length) { hint('The colour data has not loaded. Check your connection and reload.'); return; }
   const lab = rgb2lab(...rgb);
-  near = colours.map(c => ({ c, d: de2000(lab, c.lab) })).sort((a, b) => a.d - b.d).slice(0, 8);
+  near = colours.map(c => ({ c, d: de2000(lab, c.lab) })).sort((a, b) => a.d - b.d).slice(0, 5);
   pickedRgb = rgb;
+  $('nearBox').hidden = true;
   hint('Drag again to pick a different colour.');
   render(0);
   $('out').hidden = false;
@@ -256,7 +264,7 @@ function render(i) {
   $('near').innerHTML = near.map((n, j) => '<button class="' + (j === i ? 'on' : '') + '" data-i="' + j + '"><i style="background:' + n.c.hex + '"></i><b>' + n.c.name + '</b></button>').join('');
   $('pair').innerHTML =
     '<div><div class="big" style="background:' + toHex(rgb) + '"></div><h2>You picked</h2><p class="small">' + toHex(rgb) + '</p></div>' +
-    '<div><div class="big" style="background:' + best.hex + '"></div><h2>' + best.name + '</h2><p class="small">' + best.hex + ' · distance ' + bd.toFixed(1) + ' (lower is closer)</p></div>';
+    '<div id="match" role="button"><div class="big" style="background:' + best.hex + '"></div><h2>' + best.name + '</h2><p class="small">' + best.hex + ' · distance ' + bd.toFixed(1) + '</p><p class="small">Tap to see close matches</p></div>';
   const rows = best.combos.slice().sort((a, b) => a - b)
     .map(id => ({ id, list: combos[id] })).filter(r => r.list.length > 1);
   $('combos').innerHTML = rows.length
