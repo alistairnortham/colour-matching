@@ -29,6 +29,9 @@ video,canvas{display:block;width:100%;height:auto}
 #hint{color:var(--mute);margin:10px 2px}
 .bar{display:flex;gap:10px;margin:10px 0 4px}
 button{flex:1;padding:15px;font:inherit;font-weight:700;border:0;border-radius:14px;background:var(--ink);color:var(--bg)}
+.btn{flex:1;padding:13px;font-weight:700;border-radius:14px;text-align:center}
+.alt{background:transparent;color:var(--ink);border:2px solid var(--ink)}
+.vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 #pair{display:flex;gap:12px;margin-top:18px}
 #pair>div{flex:1;min-width:0}
 .big{height:96px;border-radius:14px;border:1px solid var(--line)}
@@ -54,8 +57,10 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 <p id="hint"></p>
 <div class="bar">
   <button id="snap">Take photo</button>
-  <button id="retake" hidden>Retake photo</button>
+  <button id="retake" hidden>Use camera</button>
+  <label class="btn alt" for="file">Choose photo</label>
 </div>
+<input type="file" id="file" accept="image/*" class="vh">
 <section id="out" hidden>
   <div id="pair"></div>
   <div id="combos"></div>
@@ -111,6 +116,7 @@ async function startCam() {
   hint('Point the camera at something, then tap Take photo.');
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    if ($('v').hidden) { stopCam(); return; }
     const v = $('v');
     v.muted = true;
     v.setAttribute('playsinline', '');
@@ -131,11 +137,34 @@ $('snap').onclick = () => {
   c.width = v.videoWidth; c.height = v.videoHeight;
   c.getContext('2d').drawImage(v, 0, 0);
   stopCam();
-  v.hidden = true; c.hidden = false; $('snap').hidden = true; $('retake').hidden = false;
-  hint('Drag your finger over the photo and let go on the colour you want.');
+  photoMode();
 };
 
 $('retake').onclick = startCam;
+
+function photoMode() {
+  $('v').hidden = true; $('c').hidden = false; $('dot').hidden = true; $('out').hidden = true;
+  $('snap').hidden = true; $('retake').hidden = false;
+  hint('Drag your finger over the photo and let go on the colour you want.');
+}
+
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const url = URL.createObjectURL(f), img = new Image();
+  img.onload = () => {
+    const c = $('c'), s = Math.min(1, 4032 / Math.max(img.naturalWidth, img.naturalHeight));
+    c.width = Math.round(img.naturalWidth * s);
+    c.height = Math.round(img.naturalHeight * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    stopCam();
+    photoMode();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); hint('That photo could not be opened. Try a different one.'); };
+  img.src = url;
+});
 
 const loupe = $('loupe'), lc = $('lc'), lx = lc.getContext('2d'), LS = 120;
 lc.width = lc.height = LS * (window.devicePixelRatio || 1);
