@@ -264,7 +264,8 @@ function show(rgb) {
   $('nearBox').hidden = true;
   render(0);
   $('out').hidden = false;
-  hint('Scroll down to see the matches, or drag again to pick another colour.');
+  hint('Drag again to pick another colour.');
+  $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function render(i) {
