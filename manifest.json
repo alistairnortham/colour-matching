@@ -1,6 +1,6 @@
 {
-  "name": "Colour Matcher",
-  "short_name": "Colour Matcher",
+  "name": "Colour Combinations",
+  "short_name": "Colour Combinations",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
