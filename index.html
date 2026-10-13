@@ -33,6 +33,11 @@ button{flex:1;padding:15px;font:inherit;font-weight:700;border:0;border-radius:1
 .alt{background:transparent;color:var(--ink);border:2px solid var(--ink)}
 .vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 #pair{display:flex;gap:12px;margin-top:18px}
+.near{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;-webkit-overflow-scrolling:touch}
+.near button{flex:0 0 78px;padding:6px;background:var(--card);color:var(--ink);border:2px solid transparent;border-radius:12px;font-weight:400;text-align:left}
+.near button.on{border-color:var(--ink)}
+.near i{display:block;height:44px;border-radius:8px;border:1px solid var(--line)}
+.near b{display:block;font-size:12px;font-weight:600;margin-top:4px;line-height:1.2}
 #pair>div{flex:1;min-width:0}
 .big{height:96px;border-radius:14px;border:1px solid var(--line)}
 .small{color:var(--mute);font-size:13px;margin:6px 0 0}
@@ -63,13 +68,15 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 <input type="file" id="file" accept="image/*" class="vh">
 <section id="out" hidden>
   <div id="pair"></div>
+  <h3>Close matches (tap to swap)</h3>
+  <div id="near" class="near"></div>
   <div id="combos"></div>
 </section>
 <footer>Colour combinations from Wada Sanzo's <i>A Dictionary of Color Combinations</i>, data via sanzo-wada.dmbk.io.</footer>
 </main>
 <script>
 const $ = id => document.getElementById(id);
-let colours = [], combos = {}, stream = null;
+let colours = [], combos = {}, stream = null, near = [], pickedRgb = null;
 
 function rgb2lab(r, g, b) {
   [r, g, b] = [r, g, b].map(v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; });
@@ -141,6 +148,11 @@ $('snap').onclick = () => {
 };
 
 $('retake').onclick = startCam;
+
+$('near').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) render(+b.dataset.i);
+});
 
 function photoMode() {
   $('v').hidden = true; $('c').hidden = false; $('dot').hidden = true; $('out').hidden = true;
@@ -231,9 +243,17 @@ cv.addEventListener('pointercancel', () => { dragging = false; loupe.hidden = tr
 function show(rgb) {
   if (!colours.length) { hint('The colour data has not loaded. Check your connection and reload.'); return; }
   const lab = rgb2lab(...rgb);
-  let best = null, bd = Infinity;
-  colours.forEach(c => { const d = de2000(lab, c.lab); if (d < bd) { bd = d; best = c; } });
+  near = colours.map(c => ({ c, d: de2000(lab, c.lab) })).sort((a, b) => a.d - b.d).slice(0, 8);
+  pickedRgb = rgb;
   hint('Drag again to pick a different colour.');
+  render(0);
+  $('out').hidden = false;
+  $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function render(i) {
+  const best = near[i].c, bd = near[i].d, rgb = pickedRgb;
+  $('near').innerHTML = near.map((n, j) => '<button class="' + (j === i ? 'on' : '') + '" data-i="' + j + '"><i style="background:' + n.c.hex + '"></i><b>' + n.c.name + '</b></button>').join('');
   $('pair').innerHTML =
     '<div><div class="big" style="background:' + toHex(rgb) + '"></div><h2>You picked</h2><p class="small">' + toHex(rgb) + '</p></div>' +
     '<div><div class="big" style="background:' + best.hex + '"></div><h2>' + best.name + '</h2><p class="small">' + best.hex + ' · distance ' + bd.toFixed(1) + ' (lower is closer)</p></div>';
@@ -244,8 +264,6 @@ function show(rgb) {
         r.list.map(c => '<div class="s' + (c === best ? ' me' : '') + '"><i style="background:' + c.hex + '"></i><b>' + c.name + '</b><span>' + c.hex + '</span></div>').join('') +
         '</div>').join('')
     : '<h3>No combinations are listed for ' + best.name + ' in the book.</h3>';
-  $('out').hidden = false;
-  $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function init() {
