@@ -48,8 +48,10 @@ h3{font-size:14px;font-weight:600;color:var(--mute);margin:18px 0 8px}
 #match{cursor:pointer}
 .big{height:96px;border-radius:14px;border:1px solid var(--line)}
 .small{color:var(--mute);font-size:13px;margin:6px 0 0}
-.near{display:flex;gap:8px;padding:2px 2px 6px}
-.near button{flex:1 1 0;min-width:0;padding:6px;background:var(--card);color:var(--ink);border:2px solid transparent;border-radius:12px;text-align:left}
+.near{display:flex;gap:8px;padding:2px 2px 6px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.near::-webkit-scrollbar{display:none}
+.near button:nth-child(5n+1){scroll-snap-align:start}
+.near button{flex:0 0 calc((100% - 32px) / 5);min-width:0;padding:6px;background:var(--card);color:var(--ink);border:2px solid transparent;border-radius:12px;text-align:left}
 .near button.on{border-color:var(--ink)}
 .near i{display:block;height:44px;border-radius:8px;border:1px solid var(--line)}
 .near b{display:block;font-size:12px;font-weight:600;margin-top:4px;line-height:1.2}
@@ -102,7 +104,7 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 <section id="out" hidden>
   <div id="pair"></div>
   <div id="nearBox" hidden>
-    <h3>Close matches (tap one to swap)</h3>
+    <h3>Close matches (tap one to swap, swipe for 5 more)</h3>
     <div id="near" class="near"></div>
   </div>
   <div id="combos"></div>
@@ -315,7 +317,7 @@ cv.addEventListener('pointercancel', () => { dragging = false; loupe.hidden = tr
 function show(rgb) {
   if (!colours.length) { hint('The colour data has not loaded. Check your connection and reopen the app.'); return; }
   const lab = rgb2lab(...rgb);
-  near = colours.map(c => ({ c, d: de2000(lab, c.lab) })).sort((a, b) => a.d - b.d).slice(0, 5);
+  near = colours.map(c => ({ c, d: de2000(lab, c.lab) })).sort((a, b) => a.d - b.d).slice(0, 10);
   pickedRgb = rgb;
   $('nearBox').hidden = true;
   render(0);
@@ -327,6 +329,7 @@ function show(rgb) {
 function render(i) {
   const best = near[i].c, bd = near[i].d, rgb = pickedRgb;
   $('near').innerHTML = near.map((n, j) => '<button class="' + (j === i ? 'on' : '') + '" data-i="' + j + '"><i style="background:' + n.c.hex + '"></i><b>' + n.c.name + '</b></button>').join('');
+  $('near').scrollLeft = i >= 5 ? $('near').scrollWidth : 0;
   $('pair').innerHTML =
     '<div><div class="big" style="background:' + toHex(rgb) + '"></div><h2>You picked</h2><p class="small">' + toHex(rgb) + '</p></div>' +
     '<div id="match" role="button"><div class="big" style="background:' + best.hex + '"></div><h2>' + best.name + '</h2><p class="small">' + best.hex + ' · distance ' + bd.toFixed(1) + '</p><p class="small">Tap to see close matches</p></div>';
