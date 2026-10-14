@@ -104,7 +104,7 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 <section id="out" hidden>
   <div id="pair"></div>
   <div id="nearBox" hidden>
-    <h3>Close matches (tap one to swap, swipe for 5 more)</h3>
+    <h3>Close matches</h3>
     <div id="near" class="near"></div>
   </div>
   <div id="combos"></div>
@@ -209,7 +209,7 @@ function stopCam() {
 function photoMode() {
   $('cam').classList.add('photo');
   $('v').hidden = true; $('c').hidden = false; $('dot').hidden = true; $('out').hidden = true;
-  hint('Drag over the photo and let go on the colour you want.');
+  hint('');
 }
 
 $('snap').onclick = () => {
@@ -322,7 +322,7 @@ function show(rgb) {
   $('nearBox').hidden = true;
   render(0);
   $('out').hidden = false;
-  hint('Drag again to pick another colour.');
+  hint('');
   $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -332,11 +332,11 @@ function render(i) {
   $('near').scrollLeft = i >= 5 ? $('near').scrollWidth : 0;
   $('pair').innerHTML =
     '<div><div class="big" style="background:' + toHex(rgb) + '"></div><h2>You picked</h2><p class="small">' + toHex(rgb) + '</p></div>' +
-    '<div id="match" role="button"><div class="big" style="background:' + best.hex + '"></div><h2>' + best.name + '</h2><p class="small">' + best.hex + ' · distance ' + bd.toFixed(1) + '</p><p class="small">Tap to see close matches</p></div>';
+    '<div id="match" role="button"><div class="big" style="background:' + best.hex + '"></div><h2>' + best.name + '</h2><p class="small">' + best.hex + '</p></div>';
   const rows = best.combos.slice().sort((a, b) => a - b)
     .map(id => ({ id, list: combos[id] })).filter(r => r.list.length > 1);
   $('combos').innerHTML = rows.length
-    ? '<p class="small">Tap a combination to see it full screen.</p>' + rows.map(r => '<div class="combo" data-id="' + r.id + '"><h3>Combination ' + r.id + '</h3><div class="sw">' +
+    ? rows.map(r => '<div class="combo" data-id="' + r.id + '"><h3>Combination ' + r.id + '</h3><div class="sw">' +
         r.list.map(c => '<div class="s' + (c === best ? ' me' : '') + '"><i style="background:' + c.hex + '"></i><b>' + c.name + '</b><span>' + c.hex + '</span></div>').join('') +
         '</div></div>').join('')
     : '<h3>No combinations are listed for ' + best.name + ' in the book.</h3>';
