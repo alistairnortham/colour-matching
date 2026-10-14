@@ -59,6 +59,17 @@ h3{font-size:14px;font-weight:600;color:var(--mute);margin:18px 0 8px}
 .s i{display:block;height:70px;border-radius:8px;border:1px solid var(--line)}
 .s b{display:block;font-size:13px;margin-top:6px;overflow-wrap:anywhere}
 .s span{font-size:12px;color:var(--mute)}
+.combo{cursor:pointer}
+#combo{position:fixed;inset:0;z-index:20;overflow-y:auto;background:var(--bg);-webkit-overflow-scrolling:touch}
+#bands{display:flex;height:100vh;height:100dvh}
+#bands i{flex:1}
+.ctl{position:absolute;top:calc(env(safe-area-inset-top) + 12px)}
+#cnum{left:18px;font-size:24px;font-weight:700}
+#cclose{right:14px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.3);color:#fff;font-size:18px}
+#cinfo{max-width:560px;margin:0 auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom))}
+.crow{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.crow i{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line)}
+.crow span{display:block;color:var(--mute);font-size:14px}
 footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
 </style>
 </head>
@@ -80,6 +91,12 @@ footer{color:var(--mute);font-size:12px;margin:28px 2px 8px}
   </div>
 </section>
 <div id="loupe" hidden><canvas id="lc"></canvas></div>
+<section id="combo" hidden>
+  <div id="bands"></div>
+  <div id="cnum" class="ctl"></div>
+  <button id="cclose" class="ctl" aria-label="Close">✕</button>
+  <div id="cinfo"></div>
+</section>
 <input type="file" id="file" accept="image/*" class="vh">
 <main>
 <section id="out" hidden>
@@ -316,9 +333,9 @@ function render(i) {
   const rows = best.combos.slice().sort((a, b) => a - b)
     .map(id => ({ id, list: combos[id] })).filter(r => r.list.length > 1);
   $('combos').innerHTML = rows.length
-    ? rows.map(r => '<h3>Combination ' + r.id + '</h3><div class="sw">' +
+    ? '<p class="small">Tap a combination to see it full screen.</p>' + rows.map(r => '<div class="combo" data-id="' + r.id + '"><h3>Combination ' + r.id + '</h3><div class="sw">' +
         r.list.map(c => '<div class="s' + (c === best ? ' me' : '') + '"><i style="background:' + c.hex + '"></i><b>' + c.name + '</b><span>' + c.hex + '</span></div>').join('') +
-        '</div>').join('')
+        '</div></div>').join('')
     : '<h3>No combinations are listed for ' + best.name + ' in the book.</h3>';
 }
 
@@ -329,6 +346,29 @@ $('near').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (b) render(+b.dataset.i);
 });
+
+const ink = hex => {
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#000' : '#fff';
+};
+
+function openCombo(id) {
+  const list = combos[id];
+  $('bands').innerHTML = list.map(c => '<i style="background:' + c.hex + '"></i>').join('');
+  $('cnum').textContent = id;
+  $('cnum').style.color = ink(list[0].hex);
+  $('cinfo').innerHTML = '<h2>Combination ' + id + '</h2>' +
+    list.map(c => '<div class="crow"><i style="background:' + c.hex + '"></i><div><b>' + c.name + '</b><span>' + c.hex + '</span></div></div>').join('');
+  $('combo').hidden = false;
+  $('combo').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+
+$('combos').addEventListener('click', e => {
+  const b = e.target.closest('.combo');
+  if (b) openCombo(+b.dataset.id);
+});
+$('cclose').onclick = () => { $('combo').hidden = true; document.body.style.overflow = ''; };
 
 async function init() {
   try {
